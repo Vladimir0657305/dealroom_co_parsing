@@ -1,113 +1,171 @@
-from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
-from urllib.parse import urljoin
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.proxy import Proxy, ProxyType
+from seleniumwire import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver import Chrome
+from bs4 import BeautifulSoup
+from bs4.element import Tag
+import re
+import os
+import dotenv
 import requests
 import time
-import pandas as pd
+from selenium.common.exceptions import TimeoutException
+from urllib.parse import urljoin
+import csv
 
-last_page = 72
-data_all = []
+# Загрузка настроек из файла .env
+from dotenv import load_dotenv
+load_dotenv()
 
-def get_data(driver):
-    # Создаем список, в котором будем хранить данные
-    data = []
+base_url = "https://www.idf.co.uk/"
+doctors_data = []
+
+# Получение учетных данных прокси-сервера из переменных окружения
+PROXY_USERNAME = os.getenv('PROXY_USERNAME')
+PROXY_PASSWORD = os.getenv('PROXY_PASSWORD')
+
+# Указание настроек прокси-сервера
+PROXY_HOST = "zproxy.lum-superproxy.io"
+PROXY_PORT = "22225"
+
+proxy = Proxy({
+    'proxyType': 'MANUAL',
+    'httpProxy': f"{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}"
+})
+
+# Опции браузера Chrome
+chrome_options = Options()
+chrome_options.add_argument('--ignore-certificate-errors')
+chrome_options.add_argument("--proxy-server=http://%s" % proxy.no_proxy)
+
+# Указание пути к исполняемому файлу драйвера Chrome
+driver_path = "C:/Program Files/Pyton/chromedriver"
+
+# Инициализация драйвера Chrome
+driver = webdriver.Chrome(service=Service(executable_path=driver_path), options=chrome_options)
+
+# Создаем список для хранения всех ссылок на врачей
+all_dealroom_links = []
+
+page = 1
+# Создаем глобальный счетчик
+counter = 1
+# Создаем цикл для перебора всех страниц
+while True:
+    # Формируем ссылку на текущую страницу
+    url = f'https://www.idf.co.uk/patients/find-a-doctor.aspx?Specialty=20&SubSpecialty=0&AreaCode=W1G&SearchCriteria=London&PageNumber={page}'
+
+    # Загружаем страницу
+    driver.get(url)
+
+    # Ожидание загрузки страницы
+    wait = WebDriverWait(driver, 10)
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.diversity')))
+
+    # Получение HTML-кода страницы с результатами поиска
+    html = driver.page_source
+    soup = BeautifulSoup(html, 'html.parser')
+    links = soup.select('.docresults a[href]')
+    all_dealroom_links = [urljoin(base_url, link['href']) for link in links]
+
+    # Создаем цикл для перебора всех врачей
+    for dealroom_link in all_dealroom_links:
+        print(dealroom_link)
+        # Загружаем страницу врача
+        driver.get(dealroom_link)
+        # Ожидание загрузки страницы
+        wait = WebDriverWait(driver, 10)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'footer')))
+        print('GET')
+
+    # Получение HTML-кода страницы врача
+        html = driver.page_source
+        soup = BeautifulSoup(html, 'html.parser')
+        print('WORKING')
+    # Извлечение данных врача
+        try:
+            name = soup.select_one('h2.memberprofile').get_text(strip=True)
+        except AttributeError:
+            name = 'No name data'
+        try:
+            qualifications = soup.select_one('.qualifications').get_text(strip=True)
+        except AttributeError:
+            qualifications = 'No qualifications data'
+        try:
+            specialty_label = soup.select_one('.profile-specialty')
+            specialty = specialty_label.contents[1].strip()
+        except AttributeError:
+            specialty = 'No specialty data'
+        try:
+            address_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_AddressLi'})
+            address_items = address_label.contents
+            address = ''.join([str(item).strip() for item in address_items if not (item.name == 'span' and item.get('class') == 'strong')])
+            soup_address = BeautifulSoup(address, 'html.parser')
+            for strong_tag in soup_address.find_all('span', {'class': 'strong'}):
+                strong_tag.decompose()
+            address = soup_address.get_text().strip()
+        except AttributeError:
+            address = 'No address data'
+        try:
+            telephone_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_TelephoneLi'})
+            telephone_span = telephone_label.find('span', {'class': 'strong'}, text='Appointments Telephone:')
+            telephone = telephone_span.find_next_sibling('br').next_sibling.strip().replace('Tel: ', '')
+        except AttributeError:
+            telephone = 'No telephone data'
+        try:
+            email_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_EmailAddressLi'})
+            email = email_label.find('a', href=True).text.strip()
+        except AttributeError:
+            email = 'No email data'
+        try:
+            website_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_WebsiteLi'})
+            website = website_label.find('a', href=True).text.strip()
+        except AttributeError:
+            website = 'No website data'
     
-    # Находим все элементы статей на странице
-    articles = driver.find_elements(By.CSS_SELECTOR, 'body div.viewport div.site-content div.total-wrap main.site-main div.inner div.post-feed article.post-card')
-
-    # Извлекаем информацию из каждой статьи и добавляем ее в список данных
-    for article in articles:
-        title_elem = article.find_element(By.CSS_SELECTOR, 'h2.post-card-title')
-        title = title_elem.text if title_elem else None
-        
-        # category = None
-        for category_selector in ['.post-card-primary-tag', '.post-card-tags']:
-            try:
-                category_elem = article.find_element(By.CSS_SELECTOR, category_selector)
-                category_text = category_elem.text
-                if category_text:
-                    category_list = category_text.split()
-                    if len(category_list) > 1:
-                        category = category_list[1]
-                    else:
-                        category = category_list[0]
-                else:
-                    category = 'Unknown'
-                break
-            except NoSuchElementException:
-                category = 'Unknown'
-                continue
-        
-        description_elem = article.find_element(By.CSS_SELECTOR, 'div.post-card-excerpt')
-        description = description_elem.text if description_elem else None
-        
-        image_elem = article.find_element(By.CSS_SELECTOR, 'img')
-        image_url = image_elem.get_attribute('src') if image_elem else None
-
-        # Извлекаем ссылку
-        link = None
-        try:
-            link_elem = article.find_element(By.CSS_SELECTOR, 'a.post-card-content-link')
-            link = link_elem.get_attribute('href')
-        except NoSuchElementException:
-            link = 'Unknown'
-            pass
-
-        try:
-            # Переходим по ссылке и получаем URL после переадресации
-            response = requests.get(link, verify=False)
-            final_url = response.url
-        except (requests.exceptions.ConnectionError, AttributeError):
-            final_url = 'Unknown'
-            pass
-
-        
-        print("Processing article:", title)
-        print("Category:", category)
-        print("Description:", description)
-        print("Image URL:", image_url)
-        print("Link:", final_url)
-
-        data.append({
-            'Title': title,
-            'Category': category,
-            'Description': description,
-            'Image URL': image_url,
-            'Link': final_url
+    # Добавляем данные врача в список
+        # doctors_data.append([counter, name, qualifications, specialty, address, telephone, email, website])
+        doctors_data.append({
+            'Counter': counter,
+            'Name': name,
+            'Qualifications': qualifications,
+            'Specialty': specialty,
+            'Address': address,
+            'Telephone': telephone,
+            'Email': email,
+            'Website': website
         })
 
-    return data
+# Печатаем данные для проверки
+        # for doctor in doctors_data:
+        #     print(doctor)
 
+    # Увеличиваем глобальный счетчик на 1
+        counter += 1
 
-
-driver = webdriver.Chrome()
-driver.implicitly_wait(10)
-driver.get("https://gpte.ai/")
-
-# Получаем данные со стартовой страницы и добавляем их в переменную data
-data_all = get_data(driver)
-
-# Прокручиваем страницу до конца, чтобы загрузить все элементы
-num_page = 2
-while num_page <= last_page:
-    # Строим URL страницы для парсинга
-    url = f"https://gpte.ai/page/{num_page}"
-
-    # Загружаем страницу и получаем данные
-    driver.get(url)
-    data_all += get_data(driver)
-
-    # Увеличиваем номер страницы
-    num_page += 1
-# Закрываем драйвер
+    # Проверяем, является ли текущая страница последней
+    if page == last_page:
+        break
+    # Увеличиваем значение счетчика цикла
+    page += 1
+# Закрываем браузер
 driver.quit()
 
-# Создаем DataFrame из списка данных
-df = pd.DataFrame(data_all)
+# Записываем данные в файл CSV
+import csv
 
-# Сохраняем DataFrame в CSV-файл
-df.to_csv('D:/data.csv', index=False)
+with open('doctors.csv', mode='w', encoding='utf-8', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Counter','Name', 'Qualifications', 'Specialty', 'Address', 'Telephone', 'Email', 'Website'])
+    for doctor in doctors_data:
+        # print(doctor)
+        writer.writerow(doctor.values())
+
+print('Data has been scraped and saved to doctors_data.csv')
 
 
