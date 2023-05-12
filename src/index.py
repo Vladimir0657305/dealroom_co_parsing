@@ -67,14 +67,14 @@ while True:
     
 
     # Ожидание загрузки страницы
-    wait = WebDriverWait(driver, 15)
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.drop-down-portal')))
+    wait = WebDriverWait(driver, 25)
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.main-content-wrapper')))
 
     # Прокручиваем страницу до конца
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     # Ожидание загрузки страницы
-    wait = WebDriverWait(driver, 10)
+    wait = WebDriverWait(driver, 20)
 
     # Получение HTML-кода страницы с результатами поиска
     html = driver.page_source
