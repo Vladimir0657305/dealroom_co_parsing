@@ -64,12 +64,17 @@ while True:
     # Загружаем страницу
     driver.get(url)
 
+    
+
+    # Ожидание загрузки страницы
+    wait = WebDriverWait(driver, 15)
+    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.drop-down-portal')))
+
     # Прокручиваем страницу до конца
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     # Ожидание загрузки страницы
-    wait = WebDriverWait(driver, 5)
-    # wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.diversity')))
+    wait = WebDriverWait(driver, 10)
 
     # Получение HTML-кода страницы с результатами поиска
     html = driver.page_source
@@ -136,12 +141,11 @@ while True:
             'Counter': counter,
             'Name': name,
             'Description': description,
-            'Website': website
+            'Website': website,
             'Linkedin': linkedin_element,
             'Launch_date': launch_date,
             'Employees': employees,
-            'Ubication': ubication,
-            
+            'Ubication': ubication
         })
 
 # Печатаем данные для проверки
