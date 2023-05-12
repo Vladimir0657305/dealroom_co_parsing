@@ -21,9 +21,10 @@ import csv
 # Загрузка настроек из файла .env
 from dotenv import load_dotenv
 load_dotenv()
+last_page = 2
 
-base_url = "https://www.idf.co.uk/"
-doctors_data = []
+base_url = "https://app.dealroom.co/"
+firms_data = []
 
 # Получение учетных данных прокси-сервера из переменных окружения
 PROXY_USERNAME = os.getenv('PROXY_USERNAME')
@@ -58,92 +59,94 @@ counter = 1
 # Создаем цикл для перебора всех страниц
 while True:
     # Формируем ссылку на текущую страницу
-    url = f'https://www.idf.co.uk/patients/find-a-doctor.aspx?Specialty=20&SubSpecialty=0&AreaCode=W1G&SearchCriteria=London&PageNumber={page}'
+    url = f'https://app.dealroom.co/lists/33805?sort=-startup_ranking_rating'
 
     # Загружаем страницу
     driver.get(url)
 
+    # Прокручиваем страницу до конца
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
     # Ожидание загрузки страницы
-    wait = WebDriverWait(driver, 10)
-    wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.diversity')))
+    wait = WebDriverWait(driver, 5)
+    # wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.diversity')))
 
     # Получение HTML-кода страницы с результатами поиска
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
-    links = soup.select('.docresults a[href]')
+    # links = soup.select('.docresults a[href]')
+    links = soup.select('div.table-list-item div.table-list-columns-fixed div.table-list-column name div.entity-name div.entity-name__info div.type-element a[href]')
     all_dealroom_links = [urljoin(base_url, link['href']) for link in links]
 
     # Создаем цикл для перебора всех врачей
     for dealroom_link in all_dealroom_links:
         print(dealroom_link)
-        # Загружаем страницу врача
+        # Загружаем страницу фирмы
         driver.get(dealroom_link)
         # Ожидание загрузки страницы
         wait = WebDriverWait(driver, 10)
-        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'footer')))
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.card__content')))
         print('GET')
 
-    # Получение HTML-кода страницы врача
+    # Получение HTML-кода страницы фирмы
         html = driver.page_source
         soup = BeautifulSoup(html, 'html.parser')
         print('WORKING')
-    # Извлечение данных врача
+    # Извлечение данных фирмы
         try:
-            name = soup.select_one('h2.memberprofile').get_text(strip=True)
+            name = soup.select_one('h1.name').get_text(strip=True)
         except AttributeError:
             name = 'No name data'
         try:
-            qualifications = soup.select_one('.qualifications').get_text(strip=True)
+            description = soup.select_one('div.item-details-info__details div.tagline').get_text(strip=True)
         except AttributeError:
-            qualifications = 'No qualifications data'
+            description = 'No description data'
         try:
-            specialty_label = soup.select_one('.profile-specialty')
-            specialty = specialty_label.contents[1].strip()
-        except AttributeError:
-            specialty = 'No specialty data'
-        try:
-            address_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_AddressLi'})
-            address_items = address_label.contents
-            address = ''.join([str(item).strip() for item in address_items if not (item.name == 'span' and item.get('class') == 'strong')])
-            soup_address = BeautifulSoup(address, 'html.parser')
-            for strong_tag in soup_address.find_all('span', {'class': 'strong'}):
-                strong_tag.decompose()
-            address = soup_address.get_text().strip()
-        except AttributeError:
-            address = 'No address data'
-        try:
-            telephone_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_TelephoneLi'})
-            telephone_span = telephone_label.find('span', {'class': 'strong'}, text='Appointments Telephone:')
-            telephone = telephone_span.find_next_sibling('br').next_sibling.strip().replace('Tel: ', '')
-        except AttributeError:
-            telephone = 'No telephone data'
-        try:
-            email_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_EmailAddressLi'})
-            email = email_label.find('a', href=True).text.strip()
-        except AttributeError:
-            email = 'No email data'
-        try:
-            website_label = soup.find('li', {'id': 'ctl00_MainContentPlaceHolder_WebsiteLi'})
-            website = website_label.find('a', href=True).text.strip()
+            website = soup.select_one('div.entity-details div.details div.item-details-info__website a[href]').get_text(strip=True)
         except AttributeError:
             website = 'No website data'
+        try:
+            span_element = soup.select_one('div.resource-urls')
+            if span_element:
+                index = span_element.text.find("linkedin")
+                if index != -1:
+                    linkedin_element = span_element.find_parent('a')['href']
+        except AttributeError:
+            linkedin_element = 'No linkedin data'
+        try:
+            # launch_date = soup.select_one('div.title-tagline div.item-details-info__details div.entity-details div.details div.field-list div.field div.description date-time-range').get_text(strip=True)
+            time_element = soup.find('time')
+            launch_date = time_element.text.strip()
+        except AttributeError:
+            launch_date = 'No launch_date data'
+        try:
+            employees = soup.find('div.description span a').text.strip()
+        except AttributeError:
+            employees = 'No employees data'
+
+        try:
+            ubication = soup.find('div', {'class': 'company-locations'}).span.text.strip()
+        except AttributeError:
+            ubication = 'No HQ Ubication data'
+        
     
     # Добавляем данные врача в список
-        # doctors_data.append([counter, name, qualifications, specialty, address, telephone, email, website])
-        doctors_data.append({
+        # firms_data.append([counter, name, qualifications, specialty, address, telephone, email, website])
+        firms_data.append({
             'Counter': counter,
             'Name': name,
-            'Qualifications': qualifications,
-            'Specialty': specialty,
-            'Address': address,
-            'Telephone': telephone,
-            'Email': email,
+            'Description': description,
             'Website': website
+            'Linkedin': linkedin_element,
+            'Launch_date': launch_date,
+            'Employees': employees,
+            'Ubication': ubication,
+            
         })
 
 # Печатаем данные для проверки
-        # for doctor in doctors_data:
-        #     print(doctor)
+        for firm in firms_data:
+            print(firm)
 
     # Увеличиваем глобальный счетчик на 1
         counter += 1
@@ -159,13 +162,13 @@ driver.quit()
 # Записываем данные в файл CSV
 import csv
 
-with open('doctors.csv', mode='w', encoding='utf-8', newline='') as file:
+with open('firms_data.csv', mode='w', encoding='utf-8', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(['Counter','Name', 'Qualifications', 'Specialty', 'Address', 'Telephone', 'Email', 'Website'])
-    for doctor in doctors_data:
+    writer.writerow(['Counter','Name', 'Description', 'Website', 'Linkedin', 'Launch_date', 'Employees', 'Ubication'])
+    for firm in firms_data:
         # print(doctor)
-        writer.writerow(doctor.values())
+        writer.writerow(firm.values())
 
-print('Data has been scraped and saved to doctors_data.csv')
+print('Data has been scraped and saved to firms_data.csv')
 
 
