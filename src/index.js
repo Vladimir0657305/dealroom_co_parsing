@@ -3,7 +3,8 @@ const url = 'https://app.dealroom.co/lists/33805?sort=-startup_ranking_rating';
 const lastPage = 2;
 
 (async () => {
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({ executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', headless: "new" });
+
     const page = await browser.newPage();
 
     await page.goto(url, { waitUntil: 'networkidle2' });
