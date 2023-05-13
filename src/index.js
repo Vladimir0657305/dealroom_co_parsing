@@ -14,17 +14,22 @@ const lastPage = 2;
 
     for (let i = 1; i <= lastPage; i++) {
         const links = await page.$$eval('a.entity-name__name-text', (els) => els.map((el) => el.href));
+        console.log('!!!=>',links);
         const allDealroomLinks = links.map((link) => new URL(link, url).href);
+        console.log(allDealroomLinks);
 
         for (let j = 0; j < allDealroomLinks.length; j++) {
             const dealroomLink = allDealroomLinks[j];
+            console.log(dealroomLink);
             await page.goto(dealroomLink, { waitUntil: 'networkidle2' });
 
             const name = await page.$eval('h1.name', (el) => el.textContent.trim() || 'No name data');
+            // console.log(name);
             const description = await page.$eval(
                 'div.item-details-info__details div.tagline',
                 (el) => el.textContent.trim() || 'No description data'
             );
+            // console.log(description);
             const website = await page.$eval(
                 'div.entity-details div.details div.item-details-info__website a[href]',
                 (el) => el.textContent.trim() || 'No website data'
@@ -36,6 +41,7 @@ const lastPage = 2;
                 }
                 return 'No LinkedIn data';
             });
+            // console.log(linkedin);
 
             firmsData.push({ Name: name, Description: description, Website: website, LinkedIn: linkedin });
             console.log(`Processed ${counter} firm(s).`);
