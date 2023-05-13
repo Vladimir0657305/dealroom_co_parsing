@@ -1,7 +1,6 @@
-from bs4 import BeautifulSoup
-from urllib.parse import urljoin
 import requests
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib.parse import urljoin
+from bs4 import BeautifulSoup
 import time
 import csv
 import os
@@ -26,16 +25,14 @@ PROXY_PORT = "22225"
 
 # Создание сессии
 session = requests.Session()
+session.verify = False
 session.proxies = {
     'http': f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}",
     'https': f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@{PROXY_HOST}:{PROXY_PORT}"
 }
 
-# отключение предупреждений InsecureRequestWarning
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
-# отключение проверки SSL-сертификатов
-response = requests.get('https://example.com', verify=False)
+# Отключение проверки SSL-сертификатов
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 # Создаем список для хранения всех ссылок на врачей
 all_dealroom_links = []
@@ -59,6 +56,7 @@ while True:
     soup = BeautifulSoup(response.content, 'html.parser')
 
     links = soup.select('div.table-list-item div.table-list-columns-fixed div.table-list-column name div.entity-name div.entity-name__info div.type-element a[href]')
+    print(links)
     all_dealroom_links = [urljoin(base_url, link['href']) for link in links]
 
     # Создаем цикл для перебора всех врачей
