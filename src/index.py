@@ -50,13 +50,16 @@ while True:
     response = session.get(url)
 
     # Ожидание загрузки страницы
-    time.sleep(5)
+    time.sleep(15)
 
     # Получение HTML-кода страницы с результатами поиска
     soup = BeautifulSoup(response.content, 'html.parser')
-
-    links = soup.select('div.table-list-item div.table-list-columns-fixed div.table-list-column name div.entity-name div.entity-name__info div.type-element a[href]')
+    print(soup)
+    
+    
+    links = soup.find_all('a', class_='entity-name__name-text')
     print(links)
+
     all_dealroom_links = [urljoin(base_url, link['href']) for link in links]
 
     # Создаем цикл для перебора всех врачей
@@ -67,7 +70,7 @@ while True:
         response = session.get(dealroom_link)
 
         # Ожидание загрузки страницы
-        time.sleep(5)
+        time.sleep(15)
 
         # Получение HTML-кода страницы фирмы
         soup = BeautifulSoup(response.content, 'html.parser')

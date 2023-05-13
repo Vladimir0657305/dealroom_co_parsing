@@ -6,8 +6,8 @@
   "scripts": {
     "clean": "rm -rf ./dist",
     "build": "tsc && cp src/index.html dist/index.html",
-    "start": "node index.js"
-},
+    "start": "python src/index.py"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Vladimir0657305/idf_co_uk_parsing.git"
