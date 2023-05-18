@@ -71,7 +71,7 @@ while True:
         response = requests.get(dealroom_link)
 
         # Ожидание загрузки страницы
-        time.sleep(15)
+        time.sleep(5)
 
         # Получение HTML-кода страницы фирмы
         soup = BeautifulSoup(response.content, 'html.parser')
