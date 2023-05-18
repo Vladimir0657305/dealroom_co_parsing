@@ -10,7 +10,7 @@ import dotenv
 from dotenv import load_dotenv
 load_dotenv()
 
-last_page = 2
+last_page = 91
 
 base_url = "https://app.dealroom.co/"
 firms_data = []
@@ -47,15 +47,15 @@ while True:
     url = f'https://app.dealroom.co/lists/33805?sort=-startup_ranking_rating'
 
     # Загружаем страницу
-    response = session.get(url)
+    # response = session.get(url)
+    response = requests.get(url)
 
     # Ожидание загрузки страницы
-    time.sleep(15)
+    time.sleep(5)
 
     # Получение HTML-кода страницы с результатами поиска
     soup = BeautifulSoup(response.content, 'html.parser')
     print(soup)
-    
     
     links = soup.find_all('a', class_='entity-name__name-text')
     print(links)
@@ -67,7 +67,8 @@ while True:
         print(dealroom_link)
 
         # Загружаем страницу фирмы
-        response = session.get(dealroom_link)
+        # response = session.get(dealroom_link)
+        response = requests.get(dealroom_link)
 
         # Ожидание загрузки страницы
         time.sleep(15)
@@ -101,8 +102,8 @@ while True:
         except AttributeError:
             linkedin = 'No LinkedIn data'
             # Добавляем данные в список
-    firm_data = {'Name': name, 'Description': description, 'Website': website, 'LinkedIn': linkedin}
-    firms_data.append(firm_data)
+        firm_data = {'Name': name, 'Description': description, 'Website': website, 'LinkedIn': linkedin}
+        firms_data.append(firm_data)
 
     # Выводим информацию о прогрессе выполнения
     print(f'Processed {counter} firm(s).')
@@ -119,7 +120,7 @@ while True:
 # Сохраняем результаты в CSV-файл
 with open('dealroom_data.csv', 'w', newline='', encoding='utf-8') as file:
     fieldnames = ['Name', 'Description', 'Website', 'LinkedIn']
-writer = csv.DictWriter(file, fieldnames=fieldnames)
-writer.writeheader()
-for firm_data in firms_data:
-    writer.writerow(firm_data)
+    writer = csv.DictWriter(file, fieldnames=fieldnames)
+    writer.writeheader()
+    for firm_data in firms_data:
+        writer.writerow(firm_data)
