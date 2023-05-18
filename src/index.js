@@ -110,8 +110,5 @@ const lastPage = 2;
             console.log('File saved!');
         });
 
-
-
-
     console.log('Done');
 })();
