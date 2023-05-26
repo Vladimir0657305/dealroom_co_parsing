@@ -5,12 +5,13 @@ import time
 import csv
 import os
 import dotenv
+# Нужно переделать - добавить скролл
 
 # Загрузка настроек из файла .env
 from dotenv import load_dotenv
 load_dotenv()
 
-last_page = 91
+last_page = 2
 
 base_url = "https://app.dealroom.co/"
 firms_data = []
@@ -57,12 +58,13 @@ while True:
     soup = BeautifulSoup(response.content, 'html.parser')
     print(soup)
     
+    semidiv = soup.find('div', class_='table-list-wrapper')
     links = soup.find_all('a', class_='entity-name__name-text')
-    print(links)
+    print(semidiv)
 
     all_dealroom_links = [urljoin(base_url, link['href']) for link in links]
 
-    # Создаем цикл для перебора всех врачей
+    # Создаем цикл для перебора всех ссылок
     for dealroom_link in all_dealroom_links:
         print(dealroom_link)
 
